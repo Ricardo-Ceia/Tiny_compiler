@@ -3,7 +3,8 @@ import sys
 
 class Lexer:
     def __init__(self,src):
-        self.src = src+'\n'
+        #TODO change '\0' to \n'
+        self.src = src+'\n'+'\0'
         self.currChar = ''
         self.currPos = -1
         self.nextChar()
@@ -20,7 +21,8 @@ class Lexer:
             return '\0'
         return self.src[nextPosition]
 
-    def abort(self,msg):
+    @staticmethod
+    def abort(msg):
         sys.exit("Lexing error. "+msg)
 
     def skipWhiteSpace(self):
@@ -75,13 +77,13 @@ class Lexer:
                     self.nextChar()
                     token = Token(lastChar + self.currChar, TokenType.NOTEQ)
                 else:
-                    self.abort("Expected != got !" + self.peek()) 
+                    Lexer.abort("Expected != got !" + self.peek()) 
         elif self.currChar == '\"':
             self.nextChar()
             startPos = self.currPos 
             while self.currChar != '\"':
                 if self.currChar == '\r' or self.currChar == '\n' or self.currChar == '\t' or self.currChar == '\\' or self.currChar == '%':
-                    self.abort("Illegal character in the string.")
+                    Lexer.abort("Illegal character in the string.")
                 self.nextChar()
             token = Token(self.src[startPos: self.currPos],TokenType.STRING)
         elif self.currChar.isdigit():
@@ -90,12 +92,11 @@ class Lexer:
                 self.nextChar()
             if self.peek() == '.':
                 self.nextChar()
-
                 if not self.peek().isdigit():
-                    self.abort("Illegal character in number.")
+                    Lexer.abort("Illegal character in number.")
                 while self.peek().isdigit():
                     self.nextChar()
-            token = Token(self.src[startPos:self.currPos],TokenType.NUMBER)
+            token = Token(self.src[startPos:self.currPos+1],TokenType.NUMBER)
         elif self.currChar.isalpha():
             startPos = self.currPos
             while self.peek().isalnum():
@@ -106,7 +107,7 @@ class Lexer:
             else:
                 token = Token(self.src[startPos:self.currPos+1],keyword)
         else:
-           self.abort("Unknown token." + self.currChar)
+           Lexer.abort("Unknown token." + self.currChar)
         self.nextChar()  
         return token      
 
