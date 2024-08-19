@@ -6,9 +6,9 @@ def test():
     print("Teeny Tiny Compiler")
     if len(sys.argv)!=2:
         sys.exit("Error: Compiler needs source file as argument")
-    
+
     with open(sys.argv[1],'r') as InputFile:
-        source = InputFile.read()
+       source = InputFile.read()
 
     lexer = Lexer(source)
     parser = Parser(lexer)

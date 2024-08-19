@@ -1,130 +1,168 @@
+import sys
 import enum
-import sys 
 
+# Lexer object keeps track of current position in the source code and produces each token.
 class Lexer:
-    def __init__(self,src):
-        #TODO change '\0' to \n'
-        self.src = src+'\n'+'\0'
-        self.currChar = ''
-        self.currPos = -1
+    def __init__(self, source):
+        self.source = source + '\n' # Source code to lex as a string. Append a newline to simplify lexing/parsing the last token/statement.
+        self.curChar = ''   # Current character in the string.
+        self.curPos = -1    # Current position in the string.
         self.nextChar()
 
+    # Process the next character.
     def nextChar(self):
-        self.currPos += 1
-        if self.currPos >= len(self.src):
-            return '\0'
-        self.currChar = self.src[self.currPos] 
+        self.curPos += 1
+        if self.curPos >= len(self.source):
+            self.curChar = '\0'  # EOF
+        else:
+            self.curChar = self.source[self.curPos]
 
+    # Return the lookahead character.
     def peek(self):
-        nextPosition = self.currPos+1
-        if nextPosition >= len(self.src):
+        if self.curPos + 1 >= len(self.source):
             return '\0'
-        return self.src[nextPosition]
+        return self.source[self.curPos+1]
 
+    # Invalid token found, print error message and exit.
     @staticmethod
-    def abort(msg):
-        sys.exit("Lexing error. "+msg)
+    def abort(message):
+        sys.exit("Lexing error. " + message)
 
-    def skipWhiteSpace(self):
-        while self.currChar == ' ' or self.currChar =='\t' or self.currChar == '\r':
-            self.nextChar()
-
-    def skipComment(self):
-        if self.currChar == '#':
-            while self.currChar != '\n':
-                self.nextChar() 
-
+    # Return the next token.
     def getToken(self):
-        self.skipWhiteSpace()
+        self.skipWhitespace()
         self.skipComment()
         token = None
-        if self.currChar == '+':
-            token = Token(self.currChar, TokenType.PLUS)
-        elif self.currChar == '-':
-            token = Token(self.currChar, TokenType.MINUS)
-        elif self.currChar == '*':
-            token = Token(self.currChar, TokenType.ASTERISK)
-        elif self.currChar == '/':
-            token = Token(self.currChar, TokenType.SLASH)
-        elif self.currChar == '\n':
-            token = Token(self.currChar, TokenType.NEWLINE)
-        elif self.currChar == '\0':
-            token = Token('', TokenType.EOF)
-        elif self.currChar == '=':
+
+        # Check the first character of this token to see if we can decide what it is.
+        # If it is a multiple character operator (e.g., !=), number, identifier, or keyword, then we will process the rest.
+        if self.curChar == '+':
+            token = Token(self.curChar, TokenType.PLUS)
+        elif self.curChar == '-':
+            token = Token(self.curChar, TokenType.MINUS)
+        elif self.curChar == '*':
+            token = Token(self.curChar, TokenType.ASTERISK)
+        elif self.curChar == '/':
+            token = Token(self.curChar, TokenType.SLASH)
+        elif self.curChar == '=':
+            # Check whether this token is = or ==
             if self.peek() == '=':
-                lastChar = self.currChar
+                lastChar = self.curChar
                 self.nextChar()
-                token = Token(lastChar+self.currChar,TokenType.EQEQ)
+                token = Token(lastChar + self.curChar, TokenType.EQEQ)
             else:
-                token = Token(self.currChar,TokenType.EQ)
-        elif self.currChar == '>':
+                token = Token(self.curChar, TokenType.EQ)
+        elif self.curChar == '>':
+            # Check whether this is token is > or >=
             if self.peek() == '=':
-                lastChar = self.currChar
+                lastChar = self.curChar
                 self.nextChar()
-                token = Token(lastChar+self.currChar,TokenType.GTEQ)
+                token = Token(lastChar + self.curChar, TokenType.GTEQ)
             else:
-                token = Token(self.currChar,TokenType.GT)
-        elif self.currChar == '<':
-                if self.peek() == '=':
-                    lastChar = self.currChar
-                    self.nextChar()
-                    token = Token(lastChar + self.currChar, TokenType.LTEQ)
-                else:
-                    token = Token(self.curChar, TokenType.LT)
-        elif self.currChar == '!':
-                if self.peek() == '=':
-                    lastChar = self.currChar
-                    self.nextChar()
-                    token = Token(lastChar + self.currChar, TokenType.NOTEQ)
-                else:
-                    Lexer.abort("Expected != got !" + self.peek()) 
-        elif self.currChar == '\"':
+                token = Token(self.curChar, TokenType.GT)
+        elif self.curChar == '<':
+            # Check whether this is token is < or <=
+            if self.peek() == '=':
+                lastChar = self.curChar
+                self.nextChar()
+                token = Token(lastChar + self.curChar, TokenType.LTEQ)
+            else:
+                token = Token(self.curChar, TokenType.LT)
+        elif self.curChar == '!':
+            if self.peek() == '=':
+                lastChar = self.curChar
+                self.nextChar()
+                token = Token(lastChar + self.curChar, TokenType.NOTEQ)
+            else:
+                Lexer.abort("Expected !=, got !" + self.peek())
+
+        elif self.curChar == '\"':
+            # Get characters between quotations.
             self.nextChar()
-            startPos = self.currPos 
-            while self.currChar != '\"':
-                if self.currChar == '\r' or self.currChar == '\n' or self.currChar == '\t' or self.currChar == '\\' or self.currChar == '%':
-                    Lexer.abort("Illegal character in the string.")
+            startPos = self.curPos
+
+            while self.curChar != '\"':
+                # Don't allow special characters in the string. No escape characters, newlines, tabs, or %.
+                # We will be using C's printf on this string.
+                if self.curChar == '\r' or self.curChar == '\n' or self.curChar == '\t' or self.curChar == '\\' or self.curChar == '%':
+                    Lexer.abort("Illegal character in string.")
                 self.nextChar()
-            token = Token(self.src[startPos: self.currPos],TokenType.STRING)
-        elif self.currChar.isdigit():
-            startPos = self.currPos
+
+            tokText = self.source[startPos : self.curPos] # Get the substring.
+            token = Token(tokText, TokenType.STRING)
+
+        elif self.curChar.isdigit():
+            # Leading character is a digit, so this must be a number.
+            # Get all consecutive digits and decimal if there is one.
+            startPos = self.curPos
             while self.peek().isdigit():
                 self.nextChar()
-            if self.peek() == '.':
+            if self.peek() == '.': # Decimal!
                 self.nextChar()
-                if not self.peek().isdigit():
+
+                # Must have at least one digit after decimal.
+                if not self.peek().isdigit(): 
+                    # Error!
                     Lexer.abort("Illegal character in number.")
                 while self.peek().isdigit():
                     self.nextChar()
-            token = Token(self.src[startPos:self.currPos+1],TokenType.NUMBER)
-        elif self.currChar.isalpha():
-            startPos = self.currPos
+
+            tokText = self.source[startPos : self.curPos + 1] # Get the substring.
+            token = Token(tokText, TokenType.NUMBER)
+        elif self.curChar.isalpha():
+            # Leading character is a letter, so this must be an identifier or a keyword.
+            # Get all consecutive alpha numeric characters.
+            startPos = self.curPos
             while self.peek().isalnum():
                 self.nextChar()
-            keyword = Token.checkIfKeyword(self.src[startPos:self.currPos+1])
-            if keyword == None:
-                token = Token(self.src[startPos:self.currPos+1],TokenType.IDENT)
-            else:
-                token = Token(self.src[startPos:self.currPos+1],keyword)
+
+            # Check if the token is in the list of keywords.
+            tokText = self.source[startPos : self.curPos + 1] # Get the substring.
+            keyword = Token.checkIfKeyword(tokText)
+            if keyword == None: # Identifier
+                token = Token(tokText, TokenType.IDENT)
+            else:   # Keyword
+                token = Token(tokText, keyword)
+        elif self.curChar == '\n':
+            # Newline.
+            token = Token('\n', TokenType.NEWLINE)
+        elif self.curChar == '\0':
+             # EOF.
+            token = Token('', TokenType.EOF)
         else:
-           Lexer.abort("Unknown token." + self.currChar)
-        self.nextChar()  
-        return token      
+            # Unknown token!
+            Lexer.abort("Unknown token: " + self.curChar)
+
+        self.nextChar()
+        return token
+
+    # Skip whitespace except newlines, which we will use to indicate the end of a statement.
+    def skipWhitespace(self):
+        while self.curChar == ' ' or self.curChar == '\t' or self.curChar == '\r':
+            self.nextChar()
+
+    def skipComment(self):
+        if self.curChar == '#':
+            while self.curChar != '\n':
+                self.nextChar()
 
 
-class Token:
-    def __init__(self,TokenText,TokenKind):
-        self.text = TokenText
-        self.kind = TokenKind 
+# Token contains the original text and the type of token.
+class Token:   
+    def __init__(self, tokenText, tokenKind):
+        self.text = tokenText   # The token's actual text. Used for identifiers, strings, and numbers.
+        self.kind = tokenKind   # The TokenType that this token is classified as.
 
     @staticmethod
     def checkIfKeyword(tokenText):
         for kind in TokenType:
             # Relies on all keyword enum values being 1XX.
             if kind.name == tokenText and kind.value >= 100 and kind.value < 200:
-                return kind 
+                return kind
         return None
-    
+
+
+# TokenType is our enum for all the types of tokens.
 class TokenType(enum.Enum):
     EOF = -1
     NEWLINE = 0
@@ -149,10 +187,9 @@ class TokenType(enum.Enum):
     MINUS = 203
     ASTERISK = 204
     SLASH = 205
-    EQEQ = 206	
+    EQEQ = 206
     NOTEQ = 207
     LT = 208
     LTEQ = 209
     GT = 210
     GTEQ = 211
-          
