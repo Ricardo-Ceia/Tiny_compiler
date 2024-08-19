@@ -1,25 +1,27 @@
 import sys
 from lexer import *
 
-# Parser object keeps track of current token and checks if the code matches the grammar.
+
 class Parser:
     def __init__(self, lexer):
         self.lexer = lexer
-
+        self.symbols = set()
+        self.labelsDeclared = set()
+        self.labelsGotoed = set()
         self.curToken = None
         self.peekToken = None
         self.nextToken()
-        self.nextToken()    # Call this twice to initialize current and peek.
+        self.nextToken()    
 
-    # Return true if the current token matches.
+    
     def checkToken(self, kind):
         return kind == self.curToken.kind
 
-    # Return true if the next token matches.
+    
     def checkPeek(self, kind):
         return kind == self.peekToken.kind
 
-    # Try to match current token. If not, error. Advances the current token.
+    
     def match(self, kind):
         if not self.checkToken(kind):
             Parser.abort("Expected " + kind.name + ", got " + self.curToken.kind.name)
@@ -29,9 +31,9 @@ class Parser:
     def nextToken(self):
         self.curToken = self.peekToken
         self.peekToken = self.lexer.getToken()
-        # No need to worry about passing the EOF, lexer handles that.
+       
 
-    # Return true if the current token is a comparison operator.
+    
     def isComparisonOperator(self):
         return self.checkToken(TokenType.GT) or self.checkToken(TokenType.GTEQ) or self.checkToken(TokenType.LT) or self.checkToken(TokenType.LTEQ) or self.checkToken(TokenType.EQEQ) or self.checkToken(TokenType.NOTEQ)
 
@@ -40,26 +42,23 @@ class Parser:
         sys.exit("Error. " + message)
 
 
-    # Production rules.
-
-    # program ::= {statement}
+ 
     def program(self):
         print("PROGRAM")
-
-        # Since some newlines are required in our grammar, need to skip the excess.
         while self.checkToken(TokenType.NEWLINE):
-            self.nextToken()
-
-        # Parse all the statements in the program.
+            self.nextToken()      
         while not self.checkToken(TokenType.EOF):
             self.statement()
+        for label in self.labelsDeclared:
+            if  label  not  in self.labelsGotoed:
+                Parser.abort(f"Trying to GOTO to undifined LABEL: "+label)
 
        
 
 
-    # One of the following statements...
+   
     def statement(self):
-        # Check the first token to see what kind of statement this is.
+       
 
         # "PRINT" (expression | string)
         if self.checkToken(TokenType.PRINT):
@@ -67,11 +66,11 @@ class Parser:
             self.nextToken()
 
             if self.checkToken(TokenType.STRING):
-                # Simple string.
+               
                 self.nextToken()
 
             else:
-                # Expect an expression.
+               
                 self.expression()
 
         # "IF" comparison "THEN" {statement} "ENDIF"
@@ -83,7 +82,7 @@ class Parser:
             self.match(TokenType.THEN)
             self.nl()
 
-            # Zero or more statements in the body.
+           
             while not self.checkToken(TokenType.ENDIF):
                 self.statement()
 
@@ -98,7 +97,7 @@ class Parser:
             self.match(TokenType.REPEAT)
             self.nl()
 
-            # Zero or more statements in the loop body.
+           
             while not self.checkToken(TokenType.ENDWHILE):
                 self.statement()
 
@@ -108,21 +107,25 @@ class Parser:
         elif self.checkToken(TokenType.LABEL):
             print("STATEMENT-LABEL")
             self.nextToken()
-
-            # Make sure this label doesn't already exist.
+            if self.curToken.text in self.labelsDeclared:
+                Lexer.abort("Label already exists: ",self.curToken.text)
+            self.labelsDeclared.add(self.curToken.text)
             self.match(TokenType.IDENT)
 
         # "GOTO" ident
         elif self.checkToken(TokenType.GOTO):
             print("STATEMENT-GOTO")
             self.nextToken()
-         
+            self.labelsGotoed.add(self.curToken.text)
             self.match(TokenType.IDENT)
 
         # "LET" ident "=" expression
         elif self.checkToken(TokenType.LET):
             print("STATEMENT-LET")
             self.nextToken()
+
+            if self.curToken.text not in self.symbols:
+                self.symbols.add(self.curToken.text)
 
             self.match(TokenType.IDENT)
             self.match(TokenType.EQ)
@@ -133,12 +136,11 @@ class Parser:
         elif self.checkToken(TokenType.INPUT):
             print("STATEMENT-INPUT")
             self.nextToken()
-
-            # If variable doesn't already exist, declare it.
-
+            if self.curToken.text not in self.symbols:
+                self.symbols.add(self.curToken.text)
             self.match(TokenType.IDENT)
 
-        # This is not a valid statement. Error!
+       
         else:
             Parser.abort("Invalid statement at " + self.curToken.text + " (" + self.curToken.kind.name + ")")
 
@@ -202,6 +204,8 @@ class Parser:
         if self.checkToken(TokenType.NUMBER): 
             self.nextToken()
         elif self.checkToken(TokenType.IDENT):
+            if self.curToken.text not in self.symbols:
+                Parser.abort(f"Referencing undifined variable: {self.curToken.text}")
             self.nextToken()
         else:
             # Error!
