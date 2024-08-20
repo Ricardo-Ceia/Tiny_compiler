@@ -109,6 +109,10 @@ class Lexer:
 
             tokText = self.source[startPos : self.curPos + 1] # Get the substring.
             token = Token(tokText, TokenType.NUMBER)
+        elif self.curChar == "(":
+            token = Token(self.curChar,TokenType.OPAREN)
+        elif self.curChar == ")":
+            token = Token(self.curChar,TokenType.CPAREN)
         elif self.curChar.isalpha():
             # Leading character is a letter, so this must be an identifier or a keyword.
             # Get all consecutive alpha numeric characters.
@@ -193,3 +197,6 @@ class TokenType(enum.Enum):
     LTEQ = 209
     GT = 210
     GTEQ = 211
+    #parentheses
+    OPAREN = 301
+    CPAREN = 302

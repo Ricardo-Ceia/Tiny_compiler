@@ -151,7 +151,6 @@ class Parser:
        
         else:
             Parser.abort("Invalid statement at " + self.curToken.text + " (" + self.curToken.kind.name + ")")
-
         # Newline.
         self.nl()
 
@@ -193,7 +192,6 @@ class Parser:
             self.nextToken()
             self.unary()
 
-
     # unary ::= ["+" | "-"] primary
     def unary(self):
         # Optional unary +/-
@@ -213,6 +211,12 @@ class Parser:
                 Parser.abort(f"Referencing undifined variable: {self.curToken.text}")
             self.emitter.emit(self.curToken.text)
             self.nextToken()
+        elif self.checkToken(TokenType.OPAREN):
+            self.emitter.emit("(")
+            self.nextToken()
+            self.expression()
+            self.match(TokenType.CPAREN)
+            self.emitter.emit(")")
         else:
             # Error!
             Parser.abort("Unexpected token at " + self.curToken.text)
