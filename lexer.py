@@ -114,7 +114,7 @@ class Lexer:
         elif self.curChar == ")":
             token = Token(self.curChar,TokenType.CPAREN)
         elif self.curChar.isalpha():
-            # Leading character is a letter, so this must be an identifier or a keyword.
+            # Leading character is a letter, so this must be an identifier or a keyword
             # Get all consecutive alpha numeric characters.
             startPos = self.curPos
             while self.peek().isalnum():
@@ -185,6 +185,8 @@ class TokenType(enum.Enum):
     WHILE = 109
     REPEAT = 110
     ENDWHILE = 111
+    AND = 112
+    OR = 113
     # Operators.
     EQ = 201  
     PLUS = 202

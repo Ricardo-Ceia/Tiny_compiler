@@ -1,6 +1,7 @@
 LET a = 1
 LET b = 2
+LET c = 0
 
-LET c = (1+a)*(b*5+3)
-
-PRINT c
+IF b>a AND b>c THEN
+    PRINT a
+ENDIF

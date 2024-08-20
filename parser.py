@@ -33,7 +33,6 @@ class Parser:
         self.curToken = self.peekToken
         self.peekToken = self.lexer.getToken()
        
-
     
     def isComparisonOperator(self):
         return self.checkToken(TokenType.GT) or self.checkToken(TokenType.GTEQ) or self.checkToken(TokenType.LT) or self.checkToken(TokenType.LTEQ) or self.checkToken(TokenType.EQEQ) or self.checkToken(TokenType.NOTEQ)
@@ -63,17 +62,18 @@ class Parser:
 
    
     def statement(self):
-       
-
+        print(self.curToken.text)
         # "PRINT" (expression | string)
         if self.checkToken(TokenType.PRINT):
+            print("ENTERED ON PRINT")
             self.nextToken()
-
+            print(f"curToken On PRINT:{self.curToken.text}")
             if self.checkToken(TokenType.STRING):
                 self.emitter.emitLine("printf(\"" + self.curToken.text + "\\n\");")
                 self.nextToken()
 
             else:
+                print(f"curToken On PRINT (else):{self.curToken.text}")
                 self.emitter.emit("printf(\"%" + ".2f\\n\", (float)(")
                 self.expression()
                 self.emitter.emitLine("));")
@@ -83,6 +83,7 @@ class Parser:
             self.nextToken()
             self.emitter.emit("if(")
             self.comparison()
+            print(self.curToken.text)
             self.match(TokenType.THEN)
             self.nl()
             self.emitter.emitLine("){")
@@ -161,16 +162,25 @@ class Parser:
         # Must be at least one comparison operator and another expression.
         if self.isComparisonOperator():
             self.emitter.emit(self.curToken.text)
+            print(f"Comp token:{self.curToken.text}")
             self.nextToken()
+            print(f"Next Comp token:{self.curToken.text}")
             self.expression()
         else:
             Parser.abort("Expected comparison operator at: " + self.curToken.text)
-
-        # Can have 0 or more comparison operator and expressions.
-        while self.isComparisonOperator():
-            self.emitter.emit(self.curToken.text)
+        print(f"Token after first if Token:{self.curToken.text}")
+        if self.checkToken(TokenType.OR) or self.checkToken(TokenType.AND):
+            if self.checkToken(TokenType.AND):
+                 self.emitter.emit(" && ")
+            else:
+                 self.emitter.emit(" || ")
             self.nextToken()
             self.expression()
+            # Can have 0 or more comparison operator and expressions.
+            while self.isComparisonOperator():
+                self.emitter.emit(self.curToken.text)
+                self.nextToken()
+                self.expression()
 
 
     # expression ::= term {( "-" | "+" ) term}
@@ -210,7 +220,10 @@ class Parser:
             if self.curToken.text not in self.symbols:
                 Parser.abort(f"Referencing undifined variable: {self.curToken.text}")
             self.emitter.emit(self.curToken.text)
+            if self.curToken.text == 'a':
+                print(f"a found on primary {self.curToken.text}")
             self.nextToken()
+            print(f"Check the next token after a on primary:{self.curToken.text}")
         elif self.checkToken(TokenType.OPAREN):
             self.emitter.emit("(")
             self.nextToken()
